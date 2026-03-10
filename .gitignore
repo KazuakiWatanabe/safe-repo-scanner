@@ -1,0 +1,20 @@
+## .gitignore を追加・更新すること
+以下の生成物は Git 管理対象から除外すること。
+
+```gitignore
+masked_repos/
+output/
+exports/
+reports/
+*.report.json
+*.report.csv
+*.report.md
+.streamlit/
+tmp/
+temp/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+env/
