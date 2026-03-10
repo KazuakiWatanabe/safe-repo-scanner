@@ -1,16 +1,18 @@
 ============================= test session starts =============================
-platform win32 -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0 -- C:\Python\anaconda3\python.exe
+platform win32 -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0
 cachedir: test\.pytest_tmp\cache
 rootdir: C:\GitLab\safe-repo-scanner
 configfile: pytest.ini
+testpaths: tests
 plugins: anyio-4.10.0
-collecting ... collected 5 items
+collected 20 items
 
-tests/test_detector_php.py::test_detects_basic_php_credentials PASSED    [ 20%]
-tests/test_detector_php.py::test_masks_only_sensitive_php_smtp_fields PASSED [ 40%]
-tests/test_detector_php.py::test_does_not_detect_php_variable_reference_as_secret PASSED [ 60%]
-tests/test_detector_php.py::test_does_not_detect_php_array_assignment_as_secret PASSED [ 80%]
-tests/test_detector_php.py::test_does_not_detect_php_password_help_text_as_secret PASSED [100%]
+tests\test_detector_dsn.py .                                             [  5%]
+tests\test_detector_env.py .                                             [ 10%]
+tests\test_detector_php.py ....                                          [ 30%]
+tests\test_masker.py .                                                   [ 35%]
+tests\test_reporter_export.py ........                                   [ 75%]
+tests\test_reporter_tree.py .....                                        [100%]
 
 ============================== warnings summary ===============================
 ..\..\Python\anaconda3\Lib\site-packages\_pytest\cacheprovider.py:475
@@ -18,4 +20,4 @@ tests/test_detector_php.py::test_does_not_detect_php_password_help_text_as_secre
     config.cache.set("cache/nodeids", sorted(self.cached_nodeids))
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================== 5 passed, 1 warning in 0.19s =========================
+======================== 20 passed, 1 warning in 0.71s ========================

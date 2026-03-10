@@ -57,3 +57,39 @@ def test_masks_only_sensitive_php_smtp_fields() -> None:
     assert "'password' => '********'" in masked
     assert "'timeout' => 300" in masked
     assert "'starttls' => true" in masked
+
+
+def test_does_not_detect_php_variable_reference_as_secret() -> None:
+    """PHP の変数参照は生値ではないためマスク対象にしない。"""
+
+    rules = load_masking_rules()
+    text = "'vendor_token' => $vendors_token,\n"
+
+    detections = detect_text("config/vendors.php", text, rules)
+
+    assert detections == []
+    assert mask_text(text, detections) == text
+
+
+def test_does_not_detect_php_array_assignment_as_secret() -> None:
+    """PHP の array 開始行は password を含んでもマスク対象にしない。"""
+
+    rules = load_masking_rules()
+    text = "\"omise_password\" => array(\n    'public_key' => 'pk_test_xxx',\n),\n"
+
+    detections = detect_text("config/payment.php", text, rules)
+
+    assert detections == []
+    assert mask_text(text, detections) == text
+
+
+def test_does_not_detect_php_password_help_text_as_secret() -> None:
+    """password を含む説明文キーは機密値ではないためマスク対象にしない。"""
+
+    rules = load_masking_rules()
+    text = "'extract_password' => 'パスワードは半角英数字混在で8～20文字の範囲で入力してください。',\n"
+
+    detections = detect_text("config/messages.php", text, rules)
+
+    assert detections == []
+    assert mask_text(text, detections) == text

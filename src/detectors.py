@@ -25,7 +25,7 @@ ENV_ASSIGNMENT_PATTERN = re.compile(
     r"^\s*(?:export\s+)?(?P<key>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?P<value>.+?)\s*(?:#.*)?$"
 )
 PHP_ASSIGNMENT_PATTERN = re.compile(
-    r"""^\s*['"](?P<key>[^'"]+)['"]\s*=>\s*(?P<value>'(?:\\.|[^'])*'|"(?:\\.|[^"])*"|[^,\r\n]+)"""
+    r"""^\s*['"](?P<key>[^'"]+)['"]\s*=>\s*(?P<value>'(?:\\.|[^'])*'|"(?:\\.|[^"])*"|[^,\r\n]+?)\s*,?\s*(?://.*|#.*)?$"""
 )
 JSON_ASSIGNMENT_PATTERN = re.compile(
     r'^\s*"(?P<key>[^"]+)"\s*:\s*(?P<value>"(?:\\.|[^"])*"|[^,\r\n]+)'
@@ -38,6 +38,7 @@ IPV4_PATTERN = re.compile(r"^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0
 HOST_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}$")
 JWT_PATTERN = re.compile(r"^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$")
 BEARER_PATTERN = re.compile(r"^Bearer\s+[A-Za-z0-9\-._~+/]+=*$")
+CJK_PATTERN = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]")
 
 
 def _unwrap_value(line: str, raw_value: str, start_hint: int) -> tuple[str, int, int]:
@@ -127,7 +128,7 @@ def _classify_key(
             "reason": f"Sensitive key '{key_name}' matched.",
         }
 
-    if "password" in normalized:
+    if "password" in normalized and _looks_like_secret_value(value):
         return {
             "category": "credential_password",
             "replacement": replacement_map["credential_password"],
@@ -136,7 +137,7 @@ def _classify_key(
             "rule_type": "key_name",
             "reason": f"Sensitive key '{key_name}' matched by heuristic.",
         }
-    if normalized.endswith("_host") or normalized.endswith("host"):
+    if (normalized.endswith("_host") or normalized.endswith("host")) and _looks_like_secret_value(value):
         return {
             "category": "connection_host",
             "replacement": replacement_map["connection_host"],
@@ -145,7 +146,7 @@ def _classify_key(
             "rule_type": "key_name",
             "reason": f"Host-like key '{key_name}' matched by heuristic.",
         }
-    if "token" in normalized:
+    if "token" in normalized and _looks_like_secret_value(value):
         return {
             "category": "token",
             "replacement": replacement_map["token"],
@@ -154,7 +155,7 @@ def _classify_key(
             "rule_type": "key_name",
             "reason": f"Token-like key '{key_name}' matched by heuristic.",
         }
-    if "secret" in normalized:
+    if "secret" in normalized and _looks_like_secret_value(value):
         return {
             "category": "secret",
             "replacement": replacement_map["secret"],
@@ -191,6 +192,54 @@ def _classify_key(
             "reason": "Token-like value matched.",
         }
     return None
+
+
+def _looks_like_secret_value(value: str) -> bool:
+    """ヒューリスティックで機密値らしさを判定する。
+
+    Args:
+        value: 判定対象の実値。
+    Returns:
+        bool: 機密値らしい短いトークンなら True。
+    Raises:
+        ValueError: 送出しない。
+    Note:
+        説明文や UI メッセージの誤検知を避けるため、日本語文や空白を含む値は除外する。
+    """
+
+    stripped = value.strip()
+    if not stripped:
+        return False
+    if any(character.isspace() for character in stripped):
+        return False
+    if any(mark in stripped for mark in ("。", "、", "：", "；", "！", "？", "〜", "～", "「", "」", "（", "）")):
+        return False
+    if CJK_PATTERN.search(stripped):
+        return False
+    return True
+
+
+def _is_maskable_php_value(raw_value: str) -> bool:
+    """PHP の値トークンがリテラル文字列か判定する。
+
+    Args:
+        raw_value: PHP 行から抽出した元の値トークン。
+    Returns:
+        bool: 自動マスク可能なリテラル文字列なら True。
+    Raises:
+        ValueError: 送出しない。
+    Note:
+        変数参照、array 構文、関数呼び出しのような式は誤変換を避けるため除外する。
+    """
+
+    token = raw_value.strip()
+    if len(token) < 2:
+        return False
+    if token.startswith("'") and token.endswith("'"):
+        return True
+    if token.startswith('"') and token.endswith('"'):
+        return "$" not in token[1:-1]
+    return False
 
 
 def _is_dsn_candidate(key_name: str | None, value: str, replacement_map: Mapping[str, str]) -> bool:
@@ -259,6 +308,8 @@ def _detect_line(
 
     key_name = match.group("key")
     raw_value = match.group("value")
+    if pattern is PHP_ASSIGNMENT_PATTERN and not _is_maskable_php_value(raw_value):
+        return []
     value, value_start, value_end = _unwrap_value(line, raw_value, match.start("value"))
     if not value:
         return []
