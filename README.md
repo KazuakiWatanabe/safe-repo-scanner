@@ -41,6 +41,67 @@
 
 `port`, `timeout`, `starttls`, `charset`, `driver` はマスク対象外です。
 
+## ローカル実行方法
+
+### 前提条件
+
+- Python 3.11 以上
+- Windows 11 を主対象OSとして想定
+- 外部通信なしでローカル実行すること
+
+### セットアップ
+
+PowerShell 例:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+### UI 起動
+
+```bash
+streamlit run app.py
+```
+
+起動後はブラウザで以下の流れで操作します。
+
+- 検索ルートを指定して Git リポジトリを探索
+- 対象リポジトリを選択
+- 対象ファイル候補を生成
+- スキャン結果を確認
+- `dry-run` または `apply` を実行
+
+### CLI 実行
+
+```bash
+python -m src.scanner scan <repo_path>
+python -m src.scanner report <repo_path> --format md
+python -m src.scanner mask <repo_path> --output <masked_repo_path> --dry-run
+python -m src.scanner mask <repo_path> --output <masked_repo_path> --apply
+```
+
+例:
+
+```bash
+python -m src.scanner scan C:\work\legacy-repo
+python -m src.scanner mask C:\work\legacy-repo --output C:\work\legacy-repo-masked --dry-run
+```
+
+### テスト実行
+
+```bash
+pytest
+```
+
+個別実行例:
+
+```bash
+pytest tests/test_reporter_export.py tests/test_reporter_tree.py -v
+```
+
 ## 使い方
 
 ### UI
