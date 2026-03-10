@@ -1,0 +1,50 @@
+include_extensions:
+  - ".php"
+  - ".env"
+  - ".yaml"
+  - ".yml"
+  - ".json"
+  - ".ini"
+  - ".conf"
+  - ".xml"
+
+exclude_paths:
+  - ".git/"
+  - "vendor/"
+  - "node_modules/"
+  - "storage/logs/"
+  - "tmp/"
+  - "cache/"
+
+suspicious_keys:
+  - "password"
+  - "passwd"
+  - "secret"
+  - "api_key"
+  - "access_token"
+  - "private_key"
+  - "hostname"
+  - "DB_PASSWORD"
+  - "AWS_SECRET_ACCESS_KEY"
+
+replacement_map:
+  connection_host: "dummy-host"
+  credential_user: "dummy_user"
+  credential_password: "********"
+  db_name: "dummy_db"
+  api_key: "dummy_key"
+  token: "dummy_token"
+  secret: "dummy_secret"
+  ip_address: "0.0.0.0"
+  private_key: "********"
+
+non_maskable_keys:
+  - "port"
+  - "timeout"
+  - "starttls"
+  - "ssl"
+  - "tls"
+  - "charset"
+  - "driver"
+
+allowlist: []
