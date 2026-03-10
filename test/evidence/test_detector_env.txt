@@ -1,0 +1,17 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0 -- C:\Python\anaconda3\python.exe
+cachedir: test\.pytest_tmp\cache
+rootdir: C:\GitLab\safe-repo-scanner
+configfile: pytest.ini
+plugins: anyio-4.10.0
+collecting ... collected 1 item
+
+tests/test_detector_env.py::test_detects_env_and_outputs_preview_only PASSED [100%]
+
+============================== warnings summary ===============================
+..\..\Python\anaconda3\Lib\site-packages\_pytest\cacheprovider.py:475
+  C:\Python\anaconda3\Lib\site-packages\_pytest\cacheprovider.py:475: PytestCacheWarning: could not create cache path C:\GitLab\safe-repo-scanner\test\.pytest_tmp\cache\v\cache\nodeids: [WinError 5] �A�N�Z�X�����ۂ���܂����B: 'C:\\GitLab\\safe-repo-scanner\\test\\.pytest_tmp\\cache\\v\\cache'
+    config.cache.set("cache/nodeids", sorted(self.cached_nodeids))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 1 passed, 1 warning in 0.39s =========================
