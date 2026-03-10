@@ -1,0 +1,29 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0 -- C:\Python\anaconda3\python.exe
+cachedir: test\.pytest_tmp\cache
+rootdir: C:\GitLab\safe-repo-scanner
+configfile: pytest.ini
+plugins: anyio-4.10.0
+collecting ... collected 13 items
+
+tests/test_reporter_export.py::test_step1_export_creates_target_files_csv PASSED [  7%]
+tests/test_reporter_export.py::test_step2_export_columns_match_spec PASSED [ 15%]
+tests/test_reporter_export.py::test_step3_dryrun_export_is_markdown PASSED [ 23%]
+tests/test_reporter_export.py::test_step4_mask_report_is_valid_json PASSED [ 30%]
+tests/test_reporter_export.py::test_export_does_not_contain_original_value PASSED [ 38%]
+tests/test_reporter_export.py::test_export_creates_output_dir_if_not_exists PASSED [ 46%]
+tests/test_reporter_export.py::test_export_is_utf8_encoded PASSED        [ 53%]
+tests/test_reporter_export.py::test_export_empty_results_creates_empty_file PASSED [ 61%]
+tests/test_reporter_tree.py::test_tree_shows_only_masked_files PASSED    [ 69%]
+tests/test_reporter_tree.py::test_tree_masked_count_per_file PASSED      [ 76%]
+tests/test_reporter_tree.py::test_tree_skipped_files_with_reason PASSED  [ 84%]
+tests/test_reporter_tree.py::test_tree_deep_nested_path PASSED           [ 92%]
+tests/test_reporter_tree.py::test_tree_output_filename PASSED            [100%]
+
+============================== warnings summary ===============================
+..\..\Python\anaconda3\Lib\site-packages\_pytest\cacheprovider.py:475
+  C:\Python\anaconda3\Lib\site-packages\_pytest\cacheprovider.py:475: PytestCacheWarning: could not create cache path C:\GitLab\safe-repo-scanner\test\.pytest_tmp\cache\v\cache\nodeids: [WinError 5] �A�N�Z�X�����ۂ���܂����B: 'C:\\GitLab\\safe-repo-scanner\\test\\.pytest_tmp\\cache\\v\\cache'
+    config.cache.set("cache/nodeids", sorted(self.cached_nodeids))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 13 passed, 1 warning in 0.09s ========================
