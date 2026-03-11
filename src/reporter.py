@@ -22,6 +22,22 @@ from typing import Any, Iterable
 
 from .models import DetectionResult
 
+REPORT_FIELD_LABELS = {
+    "category": "カテゴリ",
+    "key_name": "キー名",
+    "preview": "プレビュー",
+    "file_path": "ファイルパス",
+    "line_no": "行番号",
+    "column_start": "開始列",
+    "column_end": "終了列",
+    "rule_type": "ルール種別",
+    "confidence": "信頼度",
+    "severity": "重要度",
+    "replacement": "置換値",
+    "auto_maskable": "自動マスク可否",
+    "reason": "検出理由",
+}
+
 
 def serialise_results(results: Iterable[DetectionResult]) -> list[dict[str, object]]:
     """DetectionResult を安全な辞書へ変換する。
@@ -53,6 +69,25 @@ def serialise_results(results: Iterable[DetectionResult]) -> list[dict[str, obje
             "reason": result.reason,
         }
         for result in results
+    ]
+
+
+def _localise_report_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    """レポート出力向けにキー名を日本語化する。
+
+    Args:
+        rows: `serialise_results()` が返す辞書一覧。
+    Returns:
+        list[dict[str, object]]: 日本語キーへ置換した辞書一覧。
+    Raises:
+        ValueError: 送出しない。
+    Note:
+        内部処理は英語キーのまま保ち、ファイル出力時だけ表示名を変換する。
+    """
+
+    return [
+        {REPORT_FIELD_LABELS.get(key, key): value for key, value in row.items()}
+        for row in rows
     ]
 
 
@@ -309,23 +344,24 @@ def render_report(results: Iterable[DetectionResult], output_format: str) -> str
     """
 
     rows = serialise_results(results)
+    localised_rows = _localise_report_rows(rows)
     if output_format == "json":
-        return json.dumps(rows, ensure_ascii=False, indent=2)
+        return json.dumps(localised_rows, ensure_ascii=False, indent=2)
     if output_format == "csv":
         buffer = io.StringIO()
-        fieldnames = list(rows[0].keys()) if rows else ["category", "key_name", "preview"]
+        fieldnames = list(localised_rows[0].keys()) if localised_rows else list(REPORT_FIELD_LABELS.values())
         writer = csv.DictWriter(buffer, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(localised_rows)
         return buffer.getvalue()
     if output_format == "md":
-        header = "| category | key_name | preview | file_path | line_no | rule_type | confidence | replacement | auto_maskable |\n"
+        header = "| カテゴリ | キー名 | プレビュー | ファイルパス | 行番号 | ルール種別 | 信頼度 | 置換値 | 自動マスク可否 |\n"
         divider = "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
         body = "".join(
-            f"| {row['category']} | {row['key_name'] or ''} | {row['preview']} | {row['file_path']} | "
-            f"{row['line_no']} | {row['rule_type']} | {row['confidence']} | {row['replacement']} | "
-            f"{row['auto_maskable']} |\n"
-            for row in rows
+            f"| {row['カテゴリ']} | {row['キー名'] or ''} | {row['プレビュー']} | {row['ファイルパス']} | "
+            f"{row['行番号']} | {row['ルール種別']} | {row['信頼度']} | {row['置換値']} | "
+            f"{row['自動マスク可否']} |\n"
+            for row in localised_rows
         )
         return header + divider + body
     raise ValueError(f"Unsupported report format: {output_format}")

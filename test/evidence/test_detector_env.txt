@@ -4,9 +4,10 @@ cachedir: test\.pytest_tmp\cache
 rootdir: C:\GitLab\safe-repo-scanner
 configfile: pytest.ini
 plugins: anyio-4.10.0
-collecting ... collected 1 item
+collecting ... collected 2 items
 
-tests/test_detector_env.py::test_detects_env_and_outputs_preview_only PASSED [100%]
+tests/test_detector_env.py::test_detects_env_and_outputs_preview_only PASSED [ 50%]
+tests/test_detector_env.py::test_render_report_uses_japanese_field_labels_for_csv_and_markdown PASSED [100%]
 
 ============================== warnings summary ===============================
 ..\..\Python\anaconda3\Lib\site-packages\_pytest\cacheprovider.py:475
@@ -14,4 +15,4 @@ tests/test_detector_env.py::test_detects_env_and_outputs_preview_only PASSED [10
     config.cache.set("cache/nodeids", sorted(self.cached_nodeids))
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================== 1 passed, 1 warning in 0.39s =========================
+======================== 2 passed, 1 warning in 0.08s =========================
