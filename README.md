@@ -38,6 +38,7 @@
 - SMTP 設定内の `host`, `username`, `password`
 - DSN 内の `host`, `user`, `password`, `dbname`
 - API key / token / secret / private key
+- メールアドレス（`email`, `from_address`, `reply_to`, `MAIL_FROM_ADDRESS`, `MAIL_USERNAME` 等）
 
 `port`, `timeout`, `starttls`, `charset`, `driver` はマスク対象外です。
 
@@ -101,43 +102,8 @@ pytest
 個別実行例:
 
 ```bash
-pytest tests/test_reporter_export.py tests/test_reporter_tree.py -v
+pytest tests/test_detector_email.py tests/test_masker_email.py -v
 ```
-
-## 使い方
-
-### UI
-
-```bash
-streamlit run app.py
-```
-
-UI では以下を行えます。
-
-- 検索ルートからローカル Git リポジトリを探索
-- 対象リポジトリの選択
-  一覧選択とフォルダ選択ダイアログの両方に対応
-- 証跡出力先の選択
-  テキスト入力とフォルダ選択ダイアログの両方に対応
-- スキャン対象ファイル候補の確認と ON/OFF 選択
-- スキャン結果一覧表示
-- dry-run と apply 実行
-
-### CLI
-
-```bash
-python -m src.scanner scan <repo_path>
-python -m src.scanner report <repo_path> --format md
-python -m src.scanner mask <repo_path> --output <masked_repo_path> --dry-run
-python -m src.scanner mask <repo_path> --output <masked_repo_path> --apply
-```
-
-## UI のスクリーンショット想定
-
-- Repository Search: 検索ルート入力、Git リポジトリ一覧、選択 UI
-- Target Files: スキャン候補一覧、high risk フィルタ、ON/OFF 選択
-- Scan Result: preview 付き検出結果一覧
-- Dry-run / Apply: preview ベース差分、件数サマリー、出力先表示
 
 ## 制約事項
 
