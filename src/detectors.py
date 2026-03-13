@@ -39,6 +39,13 @@ HOST_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}$")
 JWT_PATTERN = re.compile(r"^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$")
 BEARER_PATTERN = re.compile(r"^Bearer\s+[A-Za-z0-9\-._~+/]+=*$")
 CJK_PATTERN = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]")
+EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
+EMAIL_KEY_NAMES = {
+    "email", "mail", "from", "from_address",
+    "to", "to_address", "reply_to", "reply_to_address",
+    "sender", "sender_address",
+    "mail_from_address", "mail_username",
+}
 
 
 def _unwrap_value(line: str, raw_value: str, start_hint: int) -> tuple[str, int, int]:
@@ -62,6 +69,50 @@ def _unwrap_value(line: str, raw_value: str, start_hint: int) -> tuple[str, int,
         value = token[1:-1]
         return value, token_start + 1, token_start + 1 + len(value)
     return token.rstrip(","), token_start, token_start + len(token.rstrip(","))
+
+
+def _classify_email(
+    key_name: str | None,
+    value: str,
+    replacement_map: Mapping[str, str],
+    email_placeholder_domains: list[str],
+) -> dict[str, str] | None:
+    """メールアドレスとしてのカテゴリを判定する。
+
+    Args:
+        key_name: 抽出したキー名。
+        value: 実値。
+        replacement_map: 置換値マップ。
+        email_placeholder_domains: プレースホルダードメイン一覧。
+    Returns:
+        dict[str, str] | None: メールアドレスなら分類情報、該当なしなら None。
+    Raises:
+        ValueError: 送出しない。
+    Note:
+        キー名一致と値パターン一致の両方を判定し、email カテゴリを優先する。
+    """
+
+    if not EMAIL_PATTERN.fullmatch(value):
+        return None
+
+    normalized = (key_name or "").strip().lower()
+    is_key_match = normalized in EMAIL_KEY_NAMES
+
+    # キー名が EMAIL_KEY_NAMES に含まれない場合でも、値がメールアドレス形式であれば検出する
+    domain = value.rsplit("@", 1)[-1].lower()
+    placeholder_set = {d.lower() for d in email_placeholder_domains}
+    confidence = "low" if domain in placeholder_set else "high"
+    rule_type = "key_match" if is_key_match else "pattern_match"
+    replacement = replacement_map.get("email", "dummy@example.com")
+
+    return {
+        "category": "email",
+        "replacement": replacement,
+        "severity": "high",
+        "confidence": confidence,
+        "rule_type": rule_type,
+        "reason": f"Email address detected ('{key_name}', {rule_type}).",
+    }
 
 
 def _classify_key(
@@ -299,6 +350,7 @@ def _detect_line(
     pattern: re.Pattern[str],
     replacement_map: Mapping[str, str],
     non_maskable_keys: set[str],
+    email_placeholder_domains: list[str] | None = None,
 ) -> list[DetectionResult]:
     """1 行に対してパターンベース検出を実行する。"""
 
@@ -326,6 +378,12 @@ def _detect_line(
         if dsn_detections:
             return dsn_detections
 
+    # メールアドレスを一般分類より優先して判定する
+    if email_placeholder_domains is not None:
+        email_metadata = _classify_email(key_name, value, replacement_map, email_placeholder_domains)
+        if email_metadata:
+            return [_build_detection(file_path, line_no, key_name, value, value_start, value_end, email_metadata)]
+
     metadata = _classify_key(key_name, value, replacement_map, non_maskable_keys)
     if not metadata:
         return []
@@ -349,6 +407,7 @@ def detect_text(file_path: str, text: str, rules: Mapping[str, object]) -> list[
 
     replacement_map = rules["replacement_map"]  # type: ignore[index]
     non_maskable_keys = {item.lower() for item in rules["non_maskable_keys"]}  # type: ignore[index]
+    email_placeholder_domains = rules.get("email_placeholder_domains", [])  # type: ignore[union-attr]
     path_obj = Path(file_path)
     suffix = path_obj.suffix.lower()
     file_name = path_obj.name.lower()
@@ -369,8 +428,13 @@ def detect_text(file_path: str, text: str, rules: Mapping[str, object]) -> list[
     detections: list[DetectionResult] = []
     for line_no, line in enumerate(text.splitlines(), start=1):
         stripped = line.strip()
-        if not stripped or stripped.startswith(("#", "//")):
+        if not stripped or stripped.startswith(("#", "//", "/*", "*")):
             continue
-        detections.extend(_detect_line(line, file_path, line_no, pattern, replacement_map, non_maskable_keys))
+        detections.extend(
+            _detect_line(
+                line, file_path, line_no, pattern, replacement_map, non_maskable_keys,
+                email_placeholder_domains=email_placeholder_domains,
+            )
+        )
     detections.sort(key=lambda item: (item.file_path, item.line_no, item.column_start))
     return detections

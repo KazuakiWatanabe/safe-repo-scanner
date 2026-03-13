@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/GitLab/safe-repo-scanner -name \"test*\" -o -name \"tests\" 2>/dev/null | grep -v \".pytest\")",
+      "Bash(python -m pytest tests/test_detector_email.py tests/test_masker_email.py -v 2>&1)",
+      "Bash(python -m pytest tests/ -v 2>&1)",
+      "Bash(mkdir -p test/evidence && python -m pytest tests/test_detector_email.py tests/test_masker_email.py -v > test/evidence/test_email_masking_v1.2.txt 2>&1)",
+      "Bash(pip install:*)",
+      "Bash(python -m pytest tests/test_detector_email.py tests/test_masker_email.py --cov=src.detectors --cov=src.masker --cov-report=term-missing 2>&1)",
+      "Bash(python -m pytest tests/ --cov=src.detectors --cov=src.masker --cov-report=term-missing 2>&1)"
+    ]
+  }
+}

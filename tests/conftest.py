@@ -3,6 +3,7 @@
 概要:
     reporter v1.1 の Step Export / Tree Export テストで共通利用する
     DetectionResult と TargetFileEntry のサンプルを提供する。
+    v1.2 ではメールアドレス検出テスト用の fixture を追加する。
 入出力:
     pytest fixture としてサンプルデータを返す。
 制約:
@@ -14,6 +15,7 @@ Note:
 from __future__ import annotations
 
 import shutil
+import textwrap
 from pathlib import Path
 from uuid import uuid4
 
@@ -147,3 +149,103 @@ def sample_skipped_files() -> list[dict[str, str]]:
         {"path": "storage/logs/app.log", "reason": "excluded path"},
         {"path": "config/legacy_sjis.php", "reason": "encoding error"},
     ]
+
+
+@pytest.fixture
+def php_email_fixture() -> str:
+    """PHP メールアドレス検出テスト用のサンプルテキストを返す。
+
+    Args:
+        なし。
+    Returns:
+        str: email / from_address キーを含む PHP 配列テキスト。
+    Raises:
+        なし。
+    Note:
+        TC-D-01 / TC-M-01 で使用する。
+    """
+
+    return textwrap.dedent("""\
+        'email' => 'admin@myapp.jp',
+        'from_address' => 'noreply@myapp.jp',
+    """)
+
+
+@pytest.fixture
+def env_email_fixture() -> str:
+    """ENV メールアドレス検出テスト用のサンプルテキストを返す。
+
+    Args:
+        なし。
+    Returns:
+        str: MAIL_FROM_ADDRESS / MAIL_USERNAME を含む ENV テキスト。
+    Raises:
+        なし。
+    Note:
+        TC-D-02 / TC-M-02 で使用する。
+    """
+
+    return textwrap.dedent("""\
+        MAIL_FROM_ADDRESS=hello@myapp.jp
+        MAIL_USERNAME=apikey@sendgrid.net
+    """)
+
+
+@pytest.fixture
+def yaml_email_fixture() -> str:
+    """YAML メールアドレス検出テスト用のサンプルテキストを返す。
+
+    Args:
+        なし。
+    Returns:
+        str: from / reply_to キーを含む YAML テキスト。
+    Raises:
+        なし。
+    Note:
+        TC-D-03 / TC-M-03 で使用する。
+    """
+
+    return textwrap.dedent("""\
+        mailer:
+          from: no-reply@myapp.jp
+          reply_to: support@myapp.jp
+    """)
+
+
+@pytest.fixture
+def php_email_pattern_fixture() -> str:
+    """値パターンマッチ検出テスト用のサンプルテキストを返す。
+
+    Args:
+        なし。
+    Returns:
+        str: EMAIL_KEY_NAMES に含まれないキーでメールアドレス値を持つ PHP テキスト。
+    Raises:
+        なし。
+    Note:
+        TC-D-04 で使用する。contact は EMAIL_KEY_NAMES に含まれない。
+    """
+
+    return "'contact' => 'info@myapp.jp',"
+
+
+@pytest.fixture
+def php_smtp_email_fixture() -> str:
+    """SMTP username メールアドレス検出テスト用のサンプルテキストを返す。
+
+    Args:
+        なし。
+    Returns:
+        str: username がメールアドレス形式の SMTP 設定 PHP テキスト。
+    Raises:
+        なし。
+    Note:
+        TC-D-07 / TC-M-06 で使用する。
+    """
+
+    return textwrap.dedent("""\
+        'smtp' => [
+            'username' => 'user@sendgrid.net',
+            'password' => 'secret',
+        ],
+    """)
