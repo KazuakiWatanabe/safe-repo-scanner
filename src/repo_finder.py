@@ -1,8 +1,8 @@
 """Git リポジトリ探索ロジック。
 
 概要:
-    指定ルート配下を再帰的に走査し、`.git` ディレクトリを持つローカル Git
-    リポジトリ一覧を返す。
+    指定ルート配下を再帰的に走査し、`.git` ディレクトリまたは `.git` ファイルを
+    持つローカル Git リポジトリ一覧を返す。
 入出力:
     検索ルートを受け取り、RepoEntry の一覧を返す。
 制約:
@@ -20,6 +20,60 @@ from pathlib import Path
 from .models import RepoEntry
 
 
+def _resolve_git_dir(repo_path: Path) -> Path | None:
+    """候補パス直下の Git 管理ディレクトリを解決する。
+
+    Args:
+        repo_path: Git リポジトリルート候補。
+    Returns:
+        Path | None: `.git` 実体ディレクトリ。見つからない場合は None。
+    Raises:
+        OSError: `.git` ファイルの読み込みに失敗した場合。
+    Note:
+        linked worktree の `.git` ファイルは `gitdir:` を解決して扱う。
+    """
+
+    git_entry = repo_path / ".git"
+    if git_entry.is_dir():
+        return git_entry
+    if not git_entry.is_file():
+        return None
+
+    content = git_entry.read_text(encoding="utf-8").strip()
+    if not content.startswith("gitdir:"):
+        return None
+
+    git_dir_text = content.split(":", maxsplit=1)[1].strip()
+    git_dir = Path(git_dir_text).expanduser()
+    if not git_dir.is_absolute():
+        git_dir = (repo_path / git_dir).resolve()
+    return git_dir if git_dir.exists() else None
+
+
+def find_enclosing_repository_root(path: str | Path) -> Path | None:
+    """指定パスを含む最も近い Git リポジトリルートを返す。
+
+    Args:
+        path: Git 管理下か確認したいパス。
+    Returns:
+        Path | None: 最も近い Git リポジトリルート。見つからない場合は None。
+    Raises:
+        OSError: `.git` ファイルの読み込みに失敗した場合。
+    Note:
+        手入力されたサブディレクトリも対象にできるよう親方向へ探索する。
+    """
+
+    candidate_path = Path(path).expanduser()
+    if not candidate_path.exists():
+        return None
+
+    current = candidate_path if candidate_path.is_dir() else candidate_path.parent
+    for repo_candidate in (current, *current.parents):
+        if _resolve_git_dir(repo_candidate) is not None:
+            return repo_candidate
+    return None
+
+
 def _read_branch_name(repo_path: Path) -> str:
     """`.git/HEAD` からブランチ名を得る。
 
@@ -33,7 +87,11 @@ def _read_branch_name(repo_path: Path) -> str:
         detached HEAD の場合は短い commit 参照にフォールバックする。
     """
 
-    head_path = repo_path / ".git" / "HEAD"
+    git_dir = _resolve_git_dir(repo_path)
+    if git_dir is None:
+        return "unknown"
+
+    head_path = git_dir / "HEAD"
     if not head_path.exists():
         return "unknown"
     content = head_path.read_text(encoding="utf-8").strip()
@@ -78,10 +136,15 @@ def discover_repositories(search_root: str | Path | None = None) -> list[RepoEnt
     """
 
     root = Path(search_root or Path.home()).expanduser()
+    if not root.exists():
+        raise FileNotFoundError(f"Search root does not exist: {root}")
+
     repositories: list[RepoEntry] = []
-    for current_root, dir_names, _ in os.walk(root):
-        if ".git" in dir_names:
-            repo_path = Path(current_root)
+    for current_root, dir_names, file_names in os.walk(root):
+        repo_path = Path(current_root)
+        has_git_marker = ".git" in dir_names or ".git" in file_names
+        dir_names[:] = [dir_name for dir_name in dir_names if dir_name != ".git"]
+        if has_git_marker and _resolve_git_dir(repo_path) is not None:
             repositories.append(
                 RepoEntry(
                     name=repo_path.name,
@@ -90,6 +153,5 @@ def discover_repositories(search_root: str | Path | None = None) -> list[RepoEnt
                     last_updated=_last_updated(repo_path),
                 )
             )
-            dir_names[:] = [dir_name for dir_name in dir_names if dir_name != ".git"]
     repositories.sort(key=lambda item: item.path.lower())
     return repositories

@@ -21,7 +21,7 @@ import streamlit as st
 
 from src.models import MaskRunResult
 from src.masker import run as run_masker
-from src.repo_finder import discover_repositories
+from src.repo_finder import discover_repositories, find_enclosing_repository_root
 from src.reporter import export_step, export_tree, serialise_results
 from src.scanner import scan_selected_files
 from src.target_file_selector import generate_target_file_entries
@@ -111,14 +111,14 @@ def _is_git_repository(path: str | Path) -> bool:
     Args:
         path: 判定対象ディレクトリ。
     Returns:
-        bool: `.git` ディレクトリを持つ場合は True。
+        bool: 自身または親ディレクトリが Git 管理下なら True。
     Raises:
         ValueError: 送出しない。
     Note:
-        UI のフォルダ選択結果を軽量に検証するために使う。
+        Git 管理下のサブディレクトリも対象にできるよう親方向へ探索する。
     """
 
-    return (Path(path).expanduser() / ".git").exists()
+    return find_enclosing_repository_root(path) is not None
 
 
 def _select_directory_via_dialog(initial_dir: str | Path | None = None) -> str | None:
@@ -408,10 +408,14 @@ def main() -> None:
         if not Path(selected_repo).exists():
             st.error(f"指定したフォルダが存在しません: {selected_repo}")
             return
-        if not _is_git_repository(selected_repo):
-            st.error(f"指定したフォルダは Git リポジトリではありません: {selected_repo}")
+        repository_root = find_enclosing_repository_root(selected_repo)
+        if repository_root is None:
+            st.error(f"指定したフォルダは Git 管理下ではありません: {selected_repo}")
             return
-        st.caption(f"選択中: {selected_repo}")
+        if Path(selected_repo).expanduser().resolve() == repository_root.resolve():
+            st.caption(f"選択中: {selected_repo}")
+        else:
+            st.caption(f"選択中: {selected_repo} (Git ルート: {repository_root})")
 
     export_dir = _render_directory_input_with_dialog(
         "証跡出力先",
